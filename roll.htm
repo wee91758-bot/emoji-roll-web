@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emoji Roll Game</title>
+<style>
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+}
+
+h1 { margin-top: 10px; }
+
+#emoji {
+  font-size: 90px;
+  margin: 20px;
+}
+
+button {
+  font-size: 18px;
+  padding: 15px;
+  margin: 5px;
+  width: 80%;
+  border: none;
+  border-radius: 12px;
+}
+
+.roll { background: #444; color: white; }
+.buy { background: #2ecc71; }
+.up { background: #3498db; }
+
+.secret { animation: flash 0.2s alternate 5; }
+.OG { animation: flashGold 0.2s alternate 6; }
+
+@keyframes flash {
+  from { background: #111; }
+  to { background: darkred; }
+}
+@keyframes flashGold {
+  from { background: #111; }
+  to { background: goldenrod; }
+}
+</style>
+</head>
+<body>
+
+<h1>🎰 Emoji Roll</h1>
+
+<div id="emoji">❓</div>
+<div id="info">Appuie sur ROLL</div>
+
+<p id="money">💰 100$</p>
+<p id="income">⏱️ 1$/sec</p>
+
+<button class="roll" onclick="roll()">🎲 ROLL</button>
+<button class="buy" onclick="buy()">🛒 ACHETER</button>
+
+<h3>⬆️ UPGRADES</h3>
+<button class="up" onclick="upgrade('x2')">x2 revenu (1M)</button>
+<button class="up" onclick="upgrade('x5')">x5 revenu (10M)</button>
+<button class="up" onclick="upgrade('secret')">+ SECRET chance (5M)</button>
+<button class="up" onclick="upgrade('og')">+ OG chance (50M)</button>
+
+<script>
+let money = 100
+let income = 1
+let multiplier = 1
+let secretBonus = 0
+let ogBonus = 0
+let current = null
+
+const rarities = [
+  {name:"Commun", chance:70, color:"white", emojis:["😀","😎","😂","🙂"], price:[25,100,200], inc:[1,5,10,50]},
+  {name:"Rare", chance:20, color:"#4da6ff", emojis:["🔥","⚡","💎"], price:[1000,5000], inc:[5000,20000]},
+  {name:"Mythique", chance:8, color:"#b366ff", emojis:["🐉","👑"], price:[1e9], inc:[1e8]},
+  {name:"SECRET", chance:1.5, color:"red", emojis:["🧿","🔮","🕳️"], price:[1e10], inc:[2.5e8]},
+  {name:"OG", chance:0.5, color:"gold", emojis:["🛸","💀"], price:[1e11], inc:[5e8]}
+]
+
+function roll(){
+  let r = Math.random()*100, t=0
+  for(let e of rarities){
+    let c = e.chance
+    if(e.name=="SECRET") c+=secretBonus
+    if(e.name=="OG") c+=ogBonus
+    t+=c
+    if(r<=t){
+      current = {
+        ...e,
+        emoji: e.emojis[Math.floor(Math.random()*e.emojis.length)],
+        price: e.price[Math.floor(Math.random()*e.price.length)],
+        inc: e.inc[Math.floor(Math.random()*e.inc.length)]
+      }
+      show()
+      break
+    }
+  }
+}
+
+function show(){
+  let em = document.getElementById("emoji")
+  em.textContent = current.emoji
+  em.style.color = current.color
+  document.getElementById("info").innerHTML =
+    `${current.name}<br>Prix: ${format(current.price)}<br>+${format(current.inc)}/sec`
+
+  if(current.name=="SECRET") document.body.className="secret"
+  if(current.name=="OG") document.body.className="OG"
+  setTimeout(()=>document.body.className="",600)
+}
+
+function buy(){
+  if(!current || money < current.price) return
+  money -= current.price
+  income += current.inc * multiplier
+  save()
+  update()
+}
+
+function upgrade(type){
+  if(type=="x2" && money>=1e6){money-=1e6; multiplier*=2}
+  if(type=="x5" && money>=1e7){money-=1e7; multiplier*=5}
+  if(type=="secret" && money>=5e6){money-=5e6; secretBonus+=0.5}
+  if(type=="og" && money>=5e7){money-=5e7; ogBonus+=0.1}
+  save()
+}
+
+function update(){
+  document.getElementById("money").textContent = "💰 "+format(money)
+  document.getElementById("income").textContent = "⏱️ "+format(income*multiplier)+"/sec"
+}
+
+function format(n){
+  if(n>=1e9) return (n/1e9).toFixed(1)+"B"
+  if(n>=1e6) return (n/1e6).toFixed(1)+"M"
+  if(n>=1e3) return (n/1e3).toFixed(1)+"K"
+  return Math.floor(n)
+}
+
+function save(){
+  localStorage.setItem("emojiSave", JSON.stringify({money,income,multiplier,secretBonus,ogBonus}))
+}
+
+function load(){
+  let s = JSON.parse(localStorage.getItem("emojiSave"))
+  if(!s) return
+  money=s.money; income=s.income; multiplier=s.multiplier
+  secretBonus=s.secretBonus; ogBonus=s.ogBonus
+}
+
+setInterval(()=>{money+=income*multiplier; update()},1000)
+load(); update()
+</script>
+
+</body>
+</html>
